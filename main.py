@@ -4,7 +4,6 @@ from PIL import Image, UnidentifiedImageError
 from torchvision import models
 import torch
 import io
-    
 
 app = FastAPI()
 
@@ -19,6 +18,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {
+        "message": "FastAPI CNN image classification server is running.",
+        "status": "ok",
+    }
+
+@app.head("/")
+def root_head():
+    return None
 
 weights = models.MobileNet_V2_Weights.DEFAULT
 model = models.mobilenet_v2(weights=weights)
@@ -28,20 +37,13 @@ preprocess = weights.transforms()
 categories = weights.meta["categories"]
 
 
-@app.get("/")
-def root():
-    return {
-        "message": "FastAPI CNN image classification server is running."
-    }
-
-
 @app.post("/classify")
 async def classify_image(image: UploadFile = File(...)):
     try:
         if not image.content_type or not image.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=400,
-                detail="Uploaded file must be an image."
+                detail="Uploaded file must be an image.",
             )
 
         image_bytes = await image.read()
@@ -51,7 +53,7 @@ async def classify_image(image: UploadFile = File(...)):
         except UnidentifiedImageError:
             raise HTTPException(
                 status_code=400,
-                detail="Could not process uploaded image."
+                detail="Could not process uploaded image.",
             )
 
         input_tensor = preprocess(img).unsqueeze(0)
@@ -66,7 +68,7 @@ async def classify_image(image: UploadFile = File(...)):
 
         return {
             "result": predicted_label,
-            "confidence": confidence_score
+            "confidence": confidence_score,
         }
 
     except HTTPException:
@@ -75,5 +77,5 @@ async def classify_image(image: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Internal server error: {str(e)}"
+            detail=f"Internal server error: {str(e)}",
         )
